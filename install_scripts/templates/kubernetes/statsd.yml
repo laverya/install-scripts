@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: replicated-statsd
+  labels:
+    app: replicated
+    tier: statsd
+spec:
+  type: ClusterIP
+  selector:
+    app: replicated
+    tier: statsd
+  ports:
+  - name: graphite
+    protocol: TCP
+    port: 2443
+  - name: statsd
+    protocol: UDP
+    port: 8125
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: replicated-statsd-tls
+data:
+  ssl.key: |
+    {{ statsd_tls_key }}
+  ssl.crt: |
+    {{ statsd_tls_cert }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: replicated-statsd-graphite-config
+data:
+  storage-schemas.conf: |
+    {{ statsd_storage_schemas_conf }}
+  storage-aggregation.conf: |
+    {{ statsd_storage_aggregation_conf }}
+---
+{% include 'kubernetes/statsd-pvc.yml' %}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: replicated-statsd
+  labels:
+    app: replicated
+    tier: statsd
+spec:
+  template:
+    metadata:
+      labels:
+        app: replicated
+        tier: statsd
+    spec:
+      containers:
+      - name: statsd
+        image: "replicated/statsd-graphite:0.1.1"
+        env: []
+        ports:
+        - name: graphite
+          protocol: TCP
+          containerPort: 2443
+        - name: statsd
+          protocol: UDP
+          containerPort: 8125
+        securityContext:
+          seLinuxOptions:
+            type: {{ selinux_replicated_domain }}
+        volumeMounts:
+        - name: replicated-statsd-nginx
+          readOnly: false
+          mountPath: /var/lib/nginx/tmp
+        - name: replicated-statsd-graphite-storage
+          readOnly: false
+          mountPath: /opt/graphite/storage/whisper
+        - name: replicated-statsd-tls
+          readOnly: true
+          mountPath: /crypto
+        - name: replicated-statsd-graphite-config
+          readOnly: true
+          mountPath: /opt/graphite/conf/storage-schemas.conf
+          subPath: storage-schemas.conf
+        - name: replicated-statsd-graphite-config
+          readOnly: true
+          mountPath: /opt/graphite/conf/storage-aggregation.conf
+          subPath: storage-aggregation.conf
+        securityContext:
+          seLinuxOptions:
+            type: {{ selinux_replicated_domain }}
+      volumes:
+      - name: replicated-statsd-nginx
+        emptyDir: {}
+      - name: replicated-statsd-graphite-storage
+        persistentVolumeClaim:
+          claimName: replicated-statsd-graphite-storage
+      - name: replicated-statsd-tls
+        configMap:
+          name: replicated-statsd-tls
+      - name: replicated-statsd-graphite-config
+        configMap:
+          name: replicated-statsd-graphite-config
+          items:
+          - key: storage-schemas.conf
+            path: storage-schemas.conf
+          - key: storage-aggregation.conf
+            path: storage-aggregation.conf

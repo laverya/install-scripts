@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: replicated-premkit-data-volume
+  labels:
+    app: replicated
+    tier: premkit{% if storageclass != None %}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ storageclass }}"
+{%- endif %}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

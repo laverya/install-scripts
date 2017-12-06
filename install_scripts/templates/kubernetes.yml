@@ -1,0 +1,11 @@
+{% include 'kubernetes/svc-lb.yml' %}
+---
+{% include 'kubernetes/svc.yml' %}
+---
+{% include 'kubernetes/pvc.yml' %}
+---
+{% include 'kubernetes/premkit-pvc.yml' %}
+---
+{% include 'kubernetes/statsd-pvc.yml' %}
+---
+{% include 'kubernetes/deploy.yml' %}

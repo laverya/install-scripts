@@ -1,0 +1,101 @@
+defaults: &defaults
+  docker:
+    - image: circleci/python:2.7-stretch-browsers
+  working_directory: ~/src
+
+version: 2
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run: make test
+
+  deploy_staging:
+    <<: *defaults
+    steps:
+      - setup_remote_docker:
+          version: 17.06.0-ce
+      - attach_workspace:
+          at: ~/src
+
+      - deploy:
+          name: Deploy Staging
+          command: |
+            if [ "${CIRCLE_PROJECT_USERNAME}" == "replicatedcom" ]; then
+              sudo apt-get install python-dev
+              sudo apt-get install python-setuptools
+              sudo easy_install pip
+              /usr/local/bin/pip install awscli --upgrade --user
+              docker build -t 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7} -f ~/src/deploy/Dockerfile.prod ~/src
+              export AWS_ACCESS_KEY_ID=$STAGING_AWS_ACCESS_KEY_ID
+              export AWS_SECRET_ACCESS_KEY=$STAGING_AWS_SECRET_ACCESS_KEY
+              $(/home/circleci/.local/bin/aws ecr get-login --no-include-email --region us-east-1)
+              docker tag id:${CIRCLE_SHA1:0:7} 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7}
+              docker push 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7}
+              docker tag id:${CIRCLE_SHA1:0:7} 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:latest
+              docker push 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:latest
+              sed "s/VERSION/${CIRCLE_SHA1:0:7}/" ./deploy/deploy-staging.json > /tmp/deploy-staging.json
+              /home/circleci/.local/bin/aws \
+                --region us-east-1 sqs send-message \
+                --queue-url https://sqs.us-east-1.amazonaws.com/923411875752/replicated_staging_deployer \
+                --message-body file:///tmp/deploy-staging.json
+            fi
+  deploy_production:
+    <<: *defaults
+    steps:
+      - setup_remote_docker:
+          version: 17.06.0-ce
+      - attach_workspace:
+          at: ~/src
+
+      - deploy:
+          name: Deploy Production
+          command: |
+            if [ "${CIRCLE_PROJECT_USERNAME}" == "replicatedcom" ]; then
+              sudo apt-get install python-dev
+              sudo apt-get install python-setuptools
+              sudo easy_install pip
+              /usr/local/bin/pip install awscli --upgrade --user
+              export AWS_ACCESS_KEY_ID=$STAGING_AWS_ACCESS_KEY_ID
+              export AWS_SECRET_ACCESS_KEY=$STAGING_AWS_SECRET_ACCESS_KEY
+              $(/home/circleci/.local/bin/aws ecr get-login --no-include-email --region us-east-1)
+              docker pull 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7}
+              export AWS_ACCESS_KEY_ID=$PRODUCTION_AWS_ACCESS_KEY_ID
+              export AWS_SECRET_ACCESS_KEY=$PRODUCTION_AWS_SECRET_ACCESS_KEY
+              $(/home/circleci/.local/bin/aws ecr get-login --no-include-email --region us-east-1)
+              docker tag 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7} 799720048698.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7}
+              docker push 799720048698.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7}
+              docker tag 923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:${CIRCLE_SHA1:0:7} 799720048698.dkr.ecr.us-east-1.amazonaws.com/install-scripts:latest
+              docker push 799720048698.dkr.ecr.us-east-1.amazonaws.com/install-scripts:latest
+              sed "s/VERSION/${CIRCLE_SHA1:0:7}/" ./deploy/deploy-production.json > /tmp/deploy-production.json
+              /home/circleci/.local/bin/aws \
+                --region us-east-1 sqs send-message \
+                --queue-url https://sqs.us-east-1.amazonaws.com/799720048698/replicated_production_deployer \
+                --message-body file:///tmp/deploy-production.json
+            fi
+workflows:
+  version: 2
+  btd:
+    jobs:
+      - build
+      - deploy_staging:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+      - hold:
+          type: approval
+          requires:
+            - deploy_staging
+          filters:
+            branches:
+              only: master
+      - deploy_production:
+          requires:
+            - hold
+          filters:
+            branches:
+              only: master

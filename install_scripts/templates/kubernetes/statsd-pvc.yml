@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: replicated-statsd-graphite-storage
+  labels:
+    app: replicated
+    tier: statsd{% if storageclass != None %}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "{{ storageclass }}"
+{%- endif %}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

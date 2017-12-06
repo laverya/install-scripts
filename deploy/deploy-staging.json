@@ -1,0 +1,15 @@
+{
+  "command": "ecs",
+  "args": [
+    "deploy",
+    "--timeout",
+    "1200",
+    "-i",
+    "install-scripts",
+    "923411875752.dkr.ecr.us-east-1.amazonaws.com/install-scripts:VERSION",
+    "--region",
+    "us-east-1",
+    "tf-api-staging-private",
+    "install-scripts"
+  ]
+}

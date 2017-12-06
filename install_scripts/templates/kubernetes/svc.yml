@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: replicated
+  labels:
+    app: replicated
+    tier: master
+spec:
+  type: ClusterIP
+  selector:
+    app: replicated
+    tier: master
+  ports:
+  - name: replicated-ui
+    port: 8800
+    protocol: TCP
+  - name: replicated-registry
+    port: 9874
+    protocol: TCP
+  - name: replicated-iapi
+    port: 9877
+    protocol: TCP
+  - name: replicated-snapshots
+    port: 9878
+    protocol: TCP

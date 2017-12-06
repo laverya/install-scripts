@@ -1,0 +1,29 @@
+version: '2'
+
+services:
+  install-scirpts:
+    build: .
+    container_name: "replicated.install-scripts"
+    networks:
+      - default
+      - saas_default
+    external_links:
+      - replicated.saas.mysql:mysql
+    ports:
+      - "8090:5000"
+    restart: always
+    environment:
+      - ENVIRONMENT=dev
+      - REPLICATED_INSTALL_URL
+      - MYSQL_USER
+      - MYSQL_PASS
+      - MYSQL_HOST
+      - MYSQL_PORT
+      - MYSQL_DB
+    volumes:
+      - .:/usr/src/app
+    command: [python, main.py]
+
+networks:
+  saas_default:
+    external: true
