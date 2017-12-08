@@ -122,6 +122,8 @@ def get_replicated_two_point_zero(replicated_channel=None,
 
     operator_tags = helpers.get_arg('operator_tags', 'local')
 
+    customer_base_url = helpers.get_arg('customer_base_url')
+
     response = render_template(
         'replicated-2.0.sh',
         **helpers.template_args(
@@ -136,7 +138,8 @@ def get_replicated_two_point_zero(replicated_channel=None,
             replicated_additional_etc_mounts=additional_etc_mounts,
             premkit_data_dir=premkit_data_dir,
             operator_tags=operator_tags,
-            replicated_username=username, ))
+            replicated_username=username, 
+            customer_base_url_override=customer_base_url, ))
     return Response(response, mimetype='text/x-shellscript')
 
 
@@ -573,3 +576,8 @@ def get_best_docker_tag():
         abort(404)
 
     return best_version
+
+@app.route('/studio')
+def get_replicated_studio():
+    response = render_template('studio-install.sh', **helpers.template_args())
+    return Response(response, mimetype='text/x-shellscript')

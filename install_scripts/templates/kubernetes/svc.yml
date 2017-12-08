@@ -23,3 +23,7 @@ spec:
   - name: replicated-snapshots
     port: 9878
     protocol: TCP
+  - name: replicated-support
+    port: 9881
+    protocol: TCP
+    targetPort: 9881

@@ -254,11 +254,17 @@ build_replicated_opts() {
         return
     fi
 
-{% if replicated_env == "staging" %}
-    REPLICATED_OPTS=" -e MARKET_BASE_URL=https://api.staging.replicated.com/market -e DATA_BASE_URL=https://data.staging.replicated.com/market -e VENDOR_REGISTRY=registry.staging.replicated.com -e INSTALLER_URL=https://get.staging.replicated.com -e REPLICATED_IMAGE_TAG_SUFFIX=.staging"
-{% else %}
-    REPLICATED_OPTS=""
+REPLICATED_OPTS=""
+
+{% if customer_base_url_override %}
+    REPLICATED_OPTS="$REPLICATED_OPTS -e MARKET_BASE_URL={{ customer_base_url_override }}"
+{% elif replicated_env == "staging" %}
+    REPLICATED_OPTS="$REPLICATED_OPTS -e MARKET_BASE_URL=https://api.staging.replicated.com/market"
 {%- endif %}
+{% if replicated_env == "staging" %}
+    REPLICATED_OPTS="$REPLICATED_OPTS -e DATA_BASE_URL=https://data.staging.replicated.com/market -e VENDOR_REGISTRY=registry.staging.replicated.com -e INSTALLER_URL=https://get.staging.replicated.com -e REPLICATED_IMAGE_TAG_SUFFIX=.staging"
+{%- endif %}
+
     if [ -n "$PROXY_ADDRESS" ]; then
         REPLICATED_OPTS="$REPLICATED_OPTS -e HTTP_PROXY=$PROXY_ADDRESS"
     fi
