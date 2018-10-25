@@ -1,0 +1,491 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: mysql
+    app.kubernetes.io/name: divvycloud
+  name: divvycloud-mysql-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 30Gi
+---
+apiVersion: v1
+data:
+  entrypoint.sh: IyEvYmluL2Jhc2gKc2V0IC1lCmlmIFsgLWUgL3RtcC9wbHVnaW5zL3BsdWdpbnMuemlwIF0KYXB0LWdldCB1cGRhdGUKYXB0LWdldCBpbnN0YWxsIC15IHVuemlwCnRoZW4KICAgIHVuemlwICAvdG1wUGx1Z2lucy9wbHVnaW5zLnppcCAtZCAvcGx1Z2lucy8KZmkKCmNkIC8KLi9lbnRyeXBvaW50LnNoICQqCgo=
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/name: divvycloud
+  name: divvycloud-entrypoint
+---
+apiVersion: v1
+data:
+  DIVVY_MYSQL_DATABASE: ZGl2dnk=
+  DIVVY_MYSQL_HOST: ZGl2dnljbG91ZC1teXNxbA==
+  DIVVY_MYSQL_PASSWORD: ZGl2dnk=
+  DIVVY_MYSQL_PORT: MzMwNg==
+  DIVVY_MYSQL_USER: ZGl2dnk=
+  DIVVY_REDIS_HOST: ZGl2dnljbG91ZC1yZWRpcw==
+  DIVVY_SECURE_MYSQL_DATABASE: ZGl2dnlrZXlz
+  DIVVY_SECURE_MYSQL_HOST: ZGl2dnljbG91ZC1teXNxbA==
+  DIVVY_SECURE_MYSQL_PASSWORD: ZGl2dnk=
+  DIVVY_SECURE_MYSQL_PORT: MzMwNg==
+  DIVVY_SECURE_MYSQL_USER: ZGl2dnk=
+  MYSQL_DATABASE: ZGl2dnk=
+  MYSQL_PASSWORD: ZGl2dnk=
+  MYSQL_ROOT_PASSWORD: SE52V0F2dkZiZmhieFlFRg==
+  MYSQL_USER: ZGl2dnk=
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/name: divvycloud
+  name: divvycloud-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    cloud.google.com/load-balancer-type: Internal
+  labels:
+    app: divvycloud-interfaceserver
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-interfaceserver
+spec:
+  ports:
+  - port: 8001
+  selector:
+    app: divvycloud-interfaceserver
+    release: divvycloud
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: divvycloud-mysql
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest-mysql
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-mysql
+spec:
+  ports:
+  - port: 3306
+    protocol: TCP
+  selector:
+    app: divvycloud-mysql
+    release: divvycloud
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: divvycloud-redis
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest-redis
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-redis
+spec:
+  ports:
+  - port: 6379
+    protocol: TCP
+  selector:
+    app: divvycloud-redis
+    release: divvycloud
+  type: ClusterIP
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  annotations:
+    kubernetes-engine.cloud.google.com/icon: data:image/png;base64, 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
+  labels:
+    app.kubernetes.io/name: divvycloud
+  name: divvycloud
+  namespace: default
+spec:
+  componentKinds:
+  - group: apps/v1beta2
+    kind: Deployment
+  - group: batch/v1
+    kind: Job
+  - group: v1
+    kind: Secret
+  - group: v1
+    kind: Service
+  descriptor:
+    description: "\nDivvyCloud is a compliance and security reporting and enforcement
+      engine for cloud and container infrastructure\n\n# Pricing\nDivvyCloud Enterprise
+      is free to deploy to your Kubernetes cluster, but requires you to purchase a
+      license from DivvyCloud directly.\n\n# Support\nDivvyCloud provides enterprise
+      grade support to our customers which includes:\n\n24x7 Support. DivvyCloud provides
+      telephone support, online documentation, and an email/web-based solution for
+      submitting support tickets.\n\nDedicated Technical Account Manager. DivvyCloud
+      provides a dedicated Technical Account Manager (TAM).  The TAM’s goal is to
+      deliver a great experience and maximize your return on investment.  \n\nAdditional
+      support is available via our [Support Documentation ](http://docs.divvycloud.com/latest/installation.html)"
+    links:
+    - description: Getting Started
+      url: https://github.com/DivvyCloud/DivvyCloud-k8s-marketplace
+    maintainers:
+    - name: DivvyCloud
+      url: http://www.divvycloud.com
+    notes: "# Access the DivvyCloud service\n\nTo access DivvyCloud use kubectl port-forward:\n\n```\nkubectl
+      port-forward svc divvycloud-interfaceserver 8001\n```\n\nYou can now connect
+      to DivvyCloud by going to http://localhost:8001\n\n# Setting up admin user\nOnce
+      the software is deployed please goto the above ip address in a browser and configure\nyour
+      admin account\n\n# Exposing the DivvyCloud service \nIf you would like to access
+      DivvyCloud without having to use the kubectl port-forward command\nyou can associate
+      a public IP address by creating a new service type:\n\n```\nkubectl expose svc
+      divvycloud-interfaceserver \\\n --name=divvycloud-load-balancer \\\n --port=80
+      --target-port=8001 --type=LoadBalancer\n```"
+    type: DivvyCloud
+  info:
+  - name: MySQL root password
+    type: Reference
+    valueFrom:
+      secretKeyRef:
+        key: MYSQL_ROOT_PASSWORD
+        name: divvycloud-secret
+  - name: DivvyCloud MySQL user name
+    type: Reference
+    valueFrom:
+      secretKeyRef:
+        key: MYSQL_USER
+        name: divvycloud-secret
+  - name: DivvyCloud MySQL password
+    type: Reference
+    valueFrom:
+      secretKeyRef:
+        key: MYSQL_PASSWORD
+        name: divvycloud-secret
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: divvycloud
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app: divvycloud-harvester
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-harvester
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: divvycloud-harvester
+      release: divvycloud
+  template:
+    metadata:
+      labels:
+        app: divvycloud-harvester
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - divvycloudworker
+        - -t
+        - harvester
+        - -n
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/divvycloud:latest
+        imagePullPolicy: Always
+        name: divvycloud
+        volumeMounts:
+        - mountPath: /scripts/
+          name: entrypoint
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: divvycloud-entrypoint
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app: divvycloud-interfaceserver
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-interfaceserver
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: divvycloud-interfaceserver
+      release: divvycloud
+  template:
+    metadata:
+      labels:
+        app: divvycloud-interfaceserver
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - divvyinterfaceserver
+        - -n
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/divvycloud:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /Status
+            port: 8001
+        name: divvycloud
+        ports:
+        - containerPort: 8001
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /Status
+            port: 8001
+        volumeMounts:
+        - mountPath: /scripts/
+          name: entrypoint
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: divvycloud-entrypoint
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app: divvycloud-longharvest
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-longharvest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: divvycloud-longharvest
+      release: divvycloud
+  template:
+    metadata:
+      labels:
+        app: divvycloud-longharvest
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - divvycloudworker
+        - -t
+        - harvester-long
+        - -n
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/divvycloud:latest
+        imagePullPolicy: Always
+        name: divvycloud
+        volumeMounts:
+        - mountPath: /scripts/
+          name: entrypoint
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: divvycloud-entrypoint
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: divvycloud-mysql
+spec:
+  selector:
+    matchLabels:
+      app: divvycloud-mysql
+      release: divvycloud
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: divvycloud-mysql
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - --ignore-db-dir=lost+found --datadir=/var/lib/mysq/data
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/quickstart-db
+        name: divvycloud-mysql
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: divvycloud-mysql-pvc
+          subPath: data
+      volumes:
+      - name: divvycloud-mysql-pvc
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app: divvycloud-ondemand
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-ondemand
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: divvycloud-ondemand
+      release: divvycloud
+  template:
+    metadata:
+      labels:
+        app: divvycloud-ondemand
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - divvycloudworker
+        - -t
+        - on-demand
+        - -n
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/divvycloud:latest
+        imagePullPolicy: Always
+        name: divvycloud
+        volumeMounts:
+        - mountPath: /scripts/
+          name: entrypoint
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: divvycloud-entrypoint
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app: divvycloud-processor
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-processor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: divvycloud-processor
+      release: divvycloud
+  template:
+    metadata:
+      labels:
+        app: divvycloud-processor
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - divvycloudworker
+        - -t
+        - processor
+        - -n
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/divvycloud:latest
+        imagePullPolicy: Always
+        name: divvycloud
+        volumeMounts:
+        - mountPath: /scripts/
+          name: entrypoint
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: divvycloud-entrypoint
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: divvycloud
+  name: divvycloud-redis
+spec:
+  selector:
+    matchLabels:
+      app: divvycloud-redis
+      release: divvycloud
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: divvycloud-redis
+        release: divvycloud
+    spec:
+      containers:
+      - image: redis
+        name: divvycloud-redis
+        ports:
+        - containerPort: 6379
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    app: divvycloud-scheduler
+    app.kubernetes.io/name: divvycloud
+    chart: divvycloud-latest
+    heritage: Tiller
+    release: divvycloud
+  name: divvycloud-scheduler
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: divvycloud-scheduler
+      release: divvycloud
+  template:
+    metadata:
+      labels:
+        app: divvycloud-scheduler
+        release: divvycloud
+    spec:
+      containers:
+      - args:
+        - divvycloudjobscheduler
+        - -n
+        - --do-db-upgrade
+        envFrom:
+        - secretRef:
+            name: divvycloud-secret
+        image: divvycloud/divvycloud:latest
+        imagePullPolicy: Always
+        name: divvycloud
+        volumeMounts:
+        - mountPath: /scripts/
+          name: entrypoint
+      volumes:
+      - name: entrypoint
+        secret:
+          secretName: divvycloud-entrypoint
